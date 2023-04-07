@@ -1,12 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using ProductAPI.Data;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductAPI.Interfaces;
 using ProductAPI.Models;
-using ProductAPI.Repository;
-using System.Net;
 
 namespace ProductAPI.Controllers
 {
@@ -24,50 +18,66 @@ namespace ProductAPI.Controllers
         [HttpGet ("/Get_All_Products")]
         [ProducesResponseType(200, Type = typeof(List<Product>))]
         [ProducesResponseType(400)]
-        public IActionResult GetAllProducts()
+        public async Task<IActionResult> GetAllProducts()
         {
-            var products = _productRepository.GetAllProducts();
+            var products =await _productRepository.GetAllProducts();
             if (products == null)
-                return NotFound();
+            {
+                ModelState.AddModelError("", "There is no products!");
+                return StatusCode(400, ModelState);
+            }
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             return Ok(products);
         }
 
-        [HttpDelete("delete_Product/{ProductID}")]
+        [HttpDelete("/Delete_Product/{ProductID}")]
         [ProducesResponseType(200, Type = typeof(List<Product>))]
         [ProducesResponseType(400)]
-        public IActionResult DeleteProductByID(int ProductID)
+        public async Task<IActionResult> DeleteProductByID(int ProductID)
         {
-            if (!_productRepository.ProductExists(ProductID))
+            if (!await _productRepository.ProductExists(ProductID))
             {
                 ModelState.AddModelError("", "No Product with such id!");
                 return StatusCode(400, ModelState);
             }
 
-            var productToDelete = _productRepository.getProductByID(ProductID);
+            if (await _productRepository.ProductHasInventory(ProductID))
+            {
+                ModelState.AddModelError("", "Delete All inventories related to this product first!");
+                return StatusCode(400, ModelState);
+            }
+
+            if (await _productRepository.ProductHasPhotos(ProductID))
+            {
+                ModelState.AddModelError("", "Delete All product photos related to this product first!");
+                return StatusCode(400, ModelState);
+            }
+
+            var productToDelete =await _productRepository.GetProductByID(ProductID);
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (!_productRepository.DeleteProduct(productToDelete))
+            if (!await _productRepository.DeleteProduct(productToDelete))
             {
                 ModelState.AddModelError("", "Delete Product Process Cancelled!");
                 return StatusCode(400, ModelState);
             }
 
-            return Ok("Item Deleted Successfully");
+            return Ok("Product Deleted Successfully");
         }
 
         [HttpPost("/Create_Product")]
         [ProducesResponseType(200, Type = typeof(List<Product>))]
         [ProducesResponseType(400)]
-        public IActionResult CreateProduct([FromBody] Product newProduct)
+        public async Task<IActionResult> CreateProduct([FromBody] Product newProduct)
         {
 
             if (newProduct == null)
                 return BadRequest(ModelState);
-            //var error = "";
+
+
 
             var productid = newProduct.ProductID;
             var productSubID = newProduct.ProductSubcategoryID;
@@ -92,23 +102,23 @@ namespace ProductAPI.Controllers
             var standardCost = newProduct.StandardCost;
             var productColor = newProduct.Color;
 
-            if (_productRepository.ProductExists(productid))
+            if (await _productRepository.ProductExists(productid))
             {
-                //error += "Product already exist!================";
+
                 ModelState.AddModelError("", "Product already exist!");
                 return StatusCode(400, ModelState);
             }
 
-            if (productSubID != null && !_productRepository.SubCategoryExist(productSubID))
+            if (productSubID != null && !await _productRepository.SubCategoryExist(productSubID))
             {
-                //error += "SubcategoryID does not exist!================";
+
                 ModelState.AddModelError("", "SubcategoryID does not exist!");
                 return StatusCode(400, ModelState);
             }
 
-            if (productModelID != null && !_productRepository.ModelExist(productModelID))
+            if (productModelID != null && !await _productRepository.ModelExist(productModelID))
             {
-                //error += "ProductModelID does not exist!================";
+
                 ModelState.AddModelError("", "ProductModelID does not exist!");
                 return StatusCode(400, ModelState);
             }
@@ -128,10 +138,6 @@ namespace ProductAPI.Controllers
                 }
                 if (sizeUnitMeasure.Length > 3 || found == false)
                 {
-                    /*error += "Size must be 'BOX' OR 'BTL' OR 'C' OR 'CAN' OR 'CAR'" +
-                    "'OR CBM' OR 'CCM' OR 'CDM' OR 'CM' OR 'CM2' OR 'CR' OR 'CS' OR 'CTN' OR 'EA' OR 'FT3' OR 'GAL'" +
-                    "OR 'IN' OR 'KM' OR 'KT' OR 'L' OR 'M' OR 'M2' OR 'M3' OR 'MG' OR 'ML' OR 'MM' OR 'PAK' OR 'PAL'" +
-                    "OR 'PC' OR 'PCT' OR 'PT'! ================";*/
                     ModelState.AddModelError("", "Size must be 'BOX' OR 'BTL' OR 'C' OR 'CAN' OR 'CAR'\n" +
                     "'OR CBM' OR 'CCM' OR 'CDM' OR 'CM' OR 'CM2' OR 'CR' OR 'CS' OR 'CTN' OR 'EA' OR 'FT3' OR 'GAL'\n" +
                     "OR 'IN' OR 'KM' OR 'KT' OR 'L' OR 'M' OR 'M2' OR 'M3' OR 'MG' OR 'ML' OR 'MM' OR 'PAK' OR 'PAL'\n" +
@@ -154,7 +160,6 @@ namespace ProductAPI.Controllers
                 }
                 if (weightUnitMeasure.Length > 3 || found == false)
                 {
-                    //error += "Weight must be 'KG' OR 'KGV' OR 'LB' OR 'DM' OR 'DZ' OR 'G' OR 'MG' OR 'OZ'!================";
                     ModelState.AddModelError("", "Weight must be 'KG' OR 'KGV' OR 'LB' OR 'DM' OR 'DZ' OR 'G' OR 'MG' OR 'OZ'!");
                     return StatusCode(400, ModelState);
                 }
@@ -162,7 +167,6 @@ namespace ProductAPI.Controllers
 
             if (productClass != null && (productClass != "H" && productClass != "M" && productClass != "L" || productClass.Length>2)) 
             {
-                //error += "Product Class should be either 'H' OR 'M' OR 'L' OR NULL)!================";
 
                 ModelState.AddModelError("", "Product Class should be either 'H' OR 'M' OR 'L' OR NULL)!");
                 return StatusCode(400, ModelState);
@@ -170,139 +174,111 @@ namespace ProductAPI.Controllers
 
             if (productStyle != null && (productStyle != "U" && productStyle != "M" && productStyle != "W" || productStyle.Length > 2 ))
             {
-                //error += "Product Style should be either 'U' OR 'M' OR 'W' OR NULL)!================";
                 ModelState.AddModelError("", "Product Style should be either 'U' OR 'M' OR 'W' OR NULL)!");
                 return StatusCode(400, ModelState);
             }
 
             if(daysToManifacture < 0 )
             {
-                // error += "DayToManifacture must be >= 0!================";
                 ModelState.AddModelError("", "DayToManifacture must be >= 0!");
                 return StatusCode(400, ModelState);
             }
 
             if(listPrice < 0)
             {
-                //error += "listPrice must be >= 0!================";
                 ModelState.AddModelError("", "listPrice must be >= 0!");
                 return StatusCode(400, ModelState);
             }
 
             if (productLine != null && (productLine != "R" && productLine != "M" && productLine != "T" && productLine != "S" || productLine.Length > 2))
             {
-                //error += "ProductLine should be either 'R' OR 'M' OR 'T' OR 'S' OR NULL)!================";
                 ModelState.AddModelError("", "ProductLine should be either 'R' OR 'M' OR 'T' OR 'S' OR NULL)!");
                 return StatusCode(400, ModelState);
             }
 
             if (reorderPoint <= 0)
             {
-                //error += "reorderPoint must be > 0!================";
                 ModelState.AddModelError("", "reorderPoint must be > 0!");
                 return StatusCode(400, ModelState);
             }
 
             if(productSafetyStockLvl <= 0) 
             {
-                //error += "product Safety Stock LeveL must be > 0!================";
                 ModelState.AddModelError("", "product Safety Stock LeveL must be > 0!");
                 return StatusCode(400, ModelState);
             }
 
             if(sellenddate != null &&  (sellenddate < sellstartdate))
             {
-                //error += "sellEnd date must be >= sellStart date!================";
                 ModelState.AddModelError("", "sellEnd date must be >= sellStart date!");
                 return StatusCode(400, ModelState);
             }
 
             if (standardCost < 0)
             {
-                //error += "Product Standard Cost must be >= 0!================";
                 ModelState.AddModelError("", "Product Standard Cost must be >= 0!");
                 return StatusCode(400, ModelState);
             }
 
             if(weight <= 0)
             {
-                //error += "weight must be > 0!================";
                 ModelState.AddModelError("", "weight must be > 0!");
                 return StatusCode(400, ModelState);
             }
 
             if(productName.Length > 50)
             {
-                //error += "name must be <= 50 characteres!================";
                 ModelState.AddModelError("", "name must be <= 50 characteres!");
                 return StatusCode(400, ModelState);
             }
             else
             {
-                foreach (var item in _productRepository.GetAllProducts())
+                if(await _productRepository.GetProductByProductName(newProduct) != null)
                 {
-                    if (productName == item.Name)
-                    {
-                        //error += "Name is a unique attr.Name entered already exist!================";
-                        ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
-                        return StatusCode(400, ModelState);
-                    }
+                    ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
+                    return StatusCode(400, ModelState);
                 }
             }
 
             if(productNumber.Length >25)
             {
-                // error += "productNumber must be <= 25 characteres!================";
                 ModelState.AddModelError("", "productNumber must be <= 25 characteres!");
                 return StatusCode(400, ModelState);
             }
             else
             {
-                foreach (var item in _productRepository.GetAllProducts())
+                if (await _productRepository.GetProductByProductNumber(newProduct) != null)
                 {
-                    if(productNumber == item.ProductNumber)
-                    {
-                        //error += "ProductNumber is a unique attr.ProductNumber entered already exist!================";
-                        ModelState.AddModelError("", "ProductNumber is a unique attr.ProductNumber entered already exist!");
-                        return StatusCode(400, ModelState);
-                    }
-                }
-            }
-
-            if(productColor != null && productColor.Length > 15)
-            {
-                // error += "product Color must be <= 15 characteres!================";
-                ModelState.AddModelError("", "product Color must be <= 15 characteres!");
-                return StatusCode(400, ModelState);
-            }
-
-            foreach (var item in _productRepository.GetAllProducts())
-            {
-                if (productRowguid == item.Rowguid)
-                {
-                    //error += "productRowGuid is a unique attr.ProductNumber entered already exist!================";
-                    ModelState.AddModelError("", "productRowGuid is a unique attr.ProductNumber entered already exist!");
+                    
+                    ModelState.AddModelError("", "ProductNumber is a unique attr.ProductNumber entered already exist!");
                     return StatusCode(400, ModelState);
                 }
             }
 
+
+            if(productColor != null && productColor.Length > 15)
+            {
+                ModelState.AddModelError("", "product Color must be <= 15 characteres!");
+                return StatusCode(400, ModelState);
+            }
+
+            if (await _productRepository.GetProductByProductRowguid(newProduct) != null)
+            {
+
+                ModelState.AddModelError("", "productRowGuid is a unique attr.ProductNumber entered already exist!");
+                return StatusCode(400, ModelState);
+            }
+
             if(size != null && size.Length > 5)
             {
-                /*error += "Size must be <= 5 characteres!================";*/
                 ModelState.AddModelError("", "Product Size must be <= 5 characteres!");
                 return StatusCode(400, ModelState);
             }
 
-            /*if (error != "")
-            {
-                
-                ModelState.AddModelError("", error);
-                return StatusCode(400, ModelState);
-            }*/
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if(!_productRepository.CreateProduct(newProduct))
+            if(!await _productRepository.CreateProduct(newProduct))
             {
                 ModelState.AddModelError("", "Process interrupted!Couldn't add product");
                 return StatusCode(400, ModelState);
@@ -314,7 +290,7 @@ namespace ProductAPI.Controllers
         [HttpPut("/Update_Product/{productID}")]
         [ProducesResponseType(200, Type = typeof(List<Product>))]
         [ProducesResponseType(400)]
-        public IActionResult UpdateProduct(int productID, [FromBody]  Product updatedProduct)
+        public async Task<IActionResult> UpdateProduct(int productID, [FromBody]  Product updatedProduct)
         {
             var updatedProductID = updatedProduct.ProductID;
             var productSubID = updatedProduct.ProductSubcategoryID;
@@ -348,19 +324,19 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
-            if(!_productRepository.ProductExists(productID))
+            if(!await _productRepository.ProductExists(productID))
             {
                 ModelState.AddModelError("", "No Product with such id!");
                 return StatusCode(400, ModelState);
             }
 
-            if (productSubID != null && !_productRepository.SubCategoryExist(productSubID))
+            if (productSubID != null && !await _productRepository.SubCategoryExist(productSubID))
             {
                 ModelState.AddModelError("", "SubcategoryID does not exist!");
                 return StatusCode(400, ModelState);
             }
 
-            if (productModelID != null && !_productRepository.ModelExist(productModelID))
+            if (productModelID != null && !await _productRepository.ModelExist(productModelID))
             {
                 ModelState.AddModelError("", "ProductModelID does not exist!");
                 return StatusCode(400, ModelState);
@@ -488,14 +464,10 @@ namespace ProductAPI.Controllers
             }
             else
             {
-
-                foreach (var item in _productRepository.GetAllProductsWithout(productID))
+                if (await _productRepository.GetProductByProductName(updatedProduct) != null)
                 {
-                    if (productName == item.Name)
-                    {
-                        ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
-                        return StatusCode(400, ModelState);
-                    }
+                    ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
+                    return StatusCode(400, ModelState);
                 }
             }
 
@@ -506,13 +478,10 @@ namespace ProductAPI.Controllers
             }
             else
             {
-                foreach (var item in _productRepository.GetAllProductsWithout(productID))
+                if (await _productRepository.GetProductByProductNumber(updatedProduct) != null)
                 {
-                    if (productNumber == item.ProductNumber)
-                    {
-                        ModelState.AddModelError("", "ProductNumber is a unique attr.ProductNumber entered already exist!");
-                        return StatusCode(400, ModelState);
-                    }
+                    ModelState.AddModelError("", "ProductNumber is a unique attr.ProductNumber entered already exist!");
+                    return StatusCode(400, ModelState);
                 }
             }
 
@@ -522,13 +491,10 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
-            foreach (var item in _productRepository.GetAllProductsWithout(productID))
+            if (await _productRepository.GetProductByProductRowguid(updatedProduct) != null)
             {
-                if (productRowguid == item.Rowguid)
-                {
-                    ModelState.AddModelError("", "productRowGuid is a unique attr.ProductNumber entered already exist!");
-                    return StatusCode(400, ModelState);
-                }
+                ModelState.AddModelError("", "productRowGuid is a unique attr.ProductNumber entered already exist!");
+                return StatusCode(400, ModelState);
             }
 
             if (size != null && size.Length > 5)
@@ -537,7 +503,7 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
-            if (!_productRepository.UpdateProduct(updatedProduct))
+            if (!await _productRepository.UpdateProduct(updatedProduct))
             {
                 ModelState.AddModelError("", "Something went wrong when updating the product!");
                 return StatusCode(400, ModelState);

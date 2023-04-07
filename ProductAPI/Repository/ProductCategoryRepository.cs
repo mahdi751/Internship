@@ -1,6 +1,8 @@
-﻿using ProductAPI.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using ProductAPI.Data;
 using ProductAPI.Interfaces;
 using ProductAPI.Models;
+using System.Threading.Tasks;
 
 namespace ProductAPI.Repository
 {
@@ -13,21 +15,70 @@ namespace ProductAPI.Repository
             _context = context;
         }
 
-        public bool CategoryExists(int categoryid)
+        public async Task<ICollection<Product>> GetProductByCategotyId(int categoryid)
         {
-            return _context.productSubcategories.Any(c => c.ProductSubcategoryID == categoryid);
-        }
-
-        public ICollection<Product> GetProductByCategotyId(int categoryid)
-        {
-            var products = _context.Products
-            .Where(p => _context.productSubcategories 
-                        .Any (ps => ps.ProductSubcategoryID == p.ProductSubcategoryID && 
+            var products = await _context.Products
+            .Where(p => _context.productSubcategories
+                        .Any(ps => ps.ProductSubcategoryID == p.ProductSubcategoryID &&
                         ps.ProductCategoryID == categoryid)
-             ).ToList();
+             ).ToListAsync();
 
             return products;
         }
 
+        public async Task<bool> CreateProductCategory(ProductCategory category)
+        {
+            await _context.AddAsync(category);
+            return await Save();
+        }
+
+        public async Task<bool> UpdateCategory(ProductCategory category)
+        {
+            _context.Update(category);
+            return await Save();
+        }
+
+        public async Task<bool> DeleteCategory(ProductCategory category)
+        {
+            _context.Remove(category);
+            return await Save();
+        }
+
+        public async Task<ProductCategory> getCategoryByID(int categoryID)
+        {
+            return await _context.ProductCategories.FindAsync(categoryID);
+        }
+
+        public async Task<ProductCategory> GetCategoryByRowguid(ProductCategory category)
+        {
+            return await _context.ProductCategories
+            .Where(p => p.rowguid == category.rowguid && p.ProductCategoryID != category.ProductCategoryID)
+            .FirstOrDefaultAsync();
+        }
+
+        public async Task<ProductCategory> GetCategoryByName(ProductCategory category)
+        {
+            return await _context.ProductCategories
+            .Where(p => p.Name == category.Name && p.ProductCategoryID != category.ProductCategoryID)
+            .FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> CategoryHasSubCategories(int categoryID)
+        {
+            return await _context.productSubcategories
+            .Where(psc => psc.ProductCategoryID == categoryID)
+            .AnyAsync();
+        }
+
+        public async Task<bool> CategoryExists(int categoryid)
+        {
+            return await _context.ProductCategories.AnyAsync(c => c.ProductCategoryID == categoryid);
+        }
+
+        public async Task<bool> Save()
+        {
+            var saved = await _context.SaveChangesAsync();
+            return saved > 0 ? true : false;
+        }
     }
 }

@@ -20,15 +20,15 @@ namespace ProductAPI.Controllers
         [HttpGet("/Get_Product_Thumbnail/{productID}")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public IActionResult GetProductThumbnailByID(int productID)
+        public async Task<IActionResult> GetProductThumbnailByID(int productID)
         {
-            if (!_productPhotoRepository.ProductExists(productID))
+            if (!await _productPhotoRepository.ProductExists(productID))
             {
                 ModelState.AddModelError("", "ProductID entered does not exist!");
                 return StatusCode(400, ModelState);
             }
 
-            var productThambnailPhoto = _productPhotoRepository.GetProductThumbnailPhoto(productID);
+            var productThambnailPhoto = await _productPhotoRepository.GetProductThumbnailPhoto(productID);
             if (productThambnailPhoto == null)
             {
                 ModelState.AddModelError("", "ProductID entered does not have a thumbnailPhoto!");
@@ -45,15 +45,15 @@ namespace ProductAPI.Controllers
         [HttpGet("/Get_Product_Large_Photo/{productID}")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public IActionResult GetProductLargePhotoByID(int productID)
+        public async Task<IActionResult> GetProductLargePhotoByID(int productID)
         {
-            if (!_productPhotoRepository.ProductExists(productID))
+            if (!await _productPhotoRepository.ProductExists(productID))
             {
                 ModelState.AddModelError("", "ProductID entered does not exist!");
                 return StatusCode(400, ModelState);
             }
 
-            var productLargePhoto = _productPhotoRepository.GetProductLargePhoto(productID);
+            var productLargePhoto = await _productPhotoRepository.GetProductLargePhoto(productID);
             if (productLargePhoto == null)
             {
                 ModelState.AddModelError("", "ProductID entered does not have a LargePhoto!");
@@ -69,11 +69,16 @@ namespace ProductAPI.Controllers
         [HttpGet("/Get_All_Product_Photos")]
         [ProducesResponseType(200, Type = typeof(List<ProductPhoto>))]
         [ProducesResponseType(400)]
-        public IActionResult GetAllProducts()
+        public async Task<IActionResult> GetAllProducts()
         {
-            var productPhotos = _productPhotoRepository.getAllProductPhotos();
+            var productPhotos =await _productPhotoRepository.GetAllProductPhotos();
+
             if (productPhotos == null)
-                return NotFound();
+            {
+                ModelState.AddModelError("", "There is no Product Photos!");
+                return StatusCode(400, ModelState);
+            }
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 

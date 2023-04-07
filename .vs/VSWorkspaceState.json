@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\ProductAPI",
+    "\\ProductAPI\\Controllers",
+    "\\ProductAPI\\Data",
+    "\\ProductAPI\\Interfaces",
+    "\\ProductAPI\\Models",
+    "\\ProductAPI\\Repository"
+  ],
+  "PreviewInSolutionExplorer": false
+}

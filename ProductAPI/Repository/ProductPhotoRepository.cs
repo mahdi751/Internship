@@ -2,47 +2,50 @@
 using ProductAPI.Data;
 using ProductAPI.Interfaces;
 using ProductAPI.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ProductAPI.Repository
 {
     public class ProductPhotoRepository : IProductPhotoRepository
     {
         private readonly DataContext _context;
-        public ProductPhotoRepository (DataContext context)
+        public ProductPhotoRepository(DataContext context)
         {
             _context = context;
         }
 
-        public byte[] GetProductThumbnailPhoto(int productID)
+        public async Task<byte[]> GetProductThumbnailPhoto(int productID)
         {
-            var productThambnailPhoto = _context.ProductPhotos
-             .FirstOrDefault
-             (pp => _context.ProductProductPhotos
-              .Any(ppp => ppp.ProductPhotoID == pp.ProductPhotoID && ppp.ProductID == productID && ppp.Primary)
-             )?.ThumbnailPhoto;
+            var productThambnailPhoto = await _context.ProductPhotos
+             .Where(pp => _context.ProductProductPhotos
+              .Any(ppp => ppp.ProductPhotoID == pp.ProductPhotoID && ppp.ProductID == productID && ppp.Primary))
+             .Select(pp => pp.ThumbnailPhoto)
+             .FirstOrDefaultAsync();
 
             return productThambnailPhoto;
         }
 
-        public byte[] GetProductLargePhoto(int productID)
+        public async Task<byte[]> GetProductLargePhoto(int productID)
         {
-            var productLargePhoto = _context.ProductPhotos
-             .FirstOrDefault
-             (pp => _context.ProductProductPhotos
-              .Any(ppp => ppp.ProductPhotoID == pp.ProductPhotoID && ppp.ProductID == productID && ppp.Primary)
-             )?.LargePhoto;
+            var productLargePhoto = await _context.ProductPhotos
+             .Where(pp => _context.ProductProductPhotos
+              .Any(ppp => ppp.ProductPhotoID == pp.ProductPhotoID && ppp.ProductID == productID && ppp.Primary))
+             .Select(pp => pp.LargePhoto)
+             .FirstOrDefaultAsync();
 
             return productLargePhoto;
         }
 
-        public bool ProductExists(int productID)
+        public async Task<bool> ProductExists(int productID)
         {
-            return _context.Products.Any(p => p.ProductID == productID);
+            return await _context.Products.AnyAsync(p => p.ProductID == productID);
         }
 
-        public ICollection<ProductPhoto> getAllProductPhotos()
+        public async Task<ICollection<ProductPhoto>> GetAllProductPhotos()
         {
-            return _context.ProductPhotos.OrderBy(p => p.ProductPhotoID).ToList();
+            return await _context.ProductPhotos.OrderBy(p => p.ProductPhotoID).ToListAsync();
         }
 
     }

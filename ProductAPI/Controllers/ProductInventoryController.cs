@@ -22,7 +22,7 @@ namespace ProductAPI.Controllers
         [HttpPost("/Create_Inventory_Product")]
         [ProducesResponseType(200, Type = typeof(List<ProductInventory>))]
         [ProducesResponseType(400)]
-        public IActionResult CreateProductInventory([FromBody] ProductInventory newProductInventory)
+        public async Task<IActionResult> CreateProductInventory([FromBody] ProductInventory newProductInventory)
         {
             if (newProductInventory == null)
                 return BadRequest(ModelState);
@@ -32,13 +32,13 @@ namespace ProductAPI.Controllers
             var bin = newProductInventory.Bin;
             var shelf = newProductInventory.Shelf;
 
-            if (!_productInventoryRepository.ProductExists(productid))
+            if (!await _productInventoryRepository.ProductExists(productid))
             {
                 ModelState.AddModelError("", "ProductID entered does not exist!");
                 return StatusCode(400, ModelState);
             }
 
-            if (!_productInventoryRepository.LocationExists(locationid))
+            if (!await _productInventoryRepository.LocationExists(locationid))
             {
                 ModelState.AddModelError("", "LocationID entered does not exist!");
                 return StatusCode(400, ModelState);
@@ -68,12 +68,12 @@ namespace ProductAPI.Controllers
             }
             newProductInventory.Shelf=newProductInventory.Shelf.ToUpper();
 
-            var productInventory = _productInventoryRepository.GetProductInventoryByProductID_LocationID(productid, locationid);
+            var productInventory = await _productInventoryRepository.GetProductInventoryByProductID_LocationID(productid, locationid);
             if (productInventory != null)
             {
                 productInventory.Quantity += newProductInventory.Quantity;
 
-                if (!_productInventoryRepository.UpdateProductInventory(productInventory))
+                if (!await _productInventoryRepository.UpdateProductInventory(productInventory))
                 {
                     ModelState.AddModelError("", "Something went wrong when updating the productInventory!");
                     return StatusCode(400, ModelState);
@@ -90,7 +90,7 @@ namespace ProductAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (!_productInventoryRepository.CreateProductInventory(newProductInventory))
+            if (!await _productInventoryRepository.CreateProductInventory(newProductInventory))
             {
                 ModelState.AddModelError("", "Process interrupted!Couldn't add productInventory");
                 return StatusCode(400, ModelState);
@@ -102,7 +102,7 @@ namespace ProductAPI.Controllers
         [HttpPut("/Update_ProductInventory/{productID}/{locationID}")]
         [ProducesResponseType(200, Type = typeof(List<ProductInventory>))]
         [ProducesResponseType(400)]
-        public IActionResult UpdateProductInventory(int productID,int locationID, [FromBody] ProductInventory updatedProductInventory)
+        public async Task<IActionResult> UpdateProductInventory(int productID,int locationID, [FromBody] ProductInventory updatedProductInventory)
         {
             var bin = updatedProductInventory.Bin;
             var shelf = updatedProductInventory.Shelf;    
@@ -122,7 +122,7 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
-            if (_productInventoryRepository.GetProductInventoryByProductID_LocationID(productID, locationID) == null)
+            if (await _productInventoryRepository.GetProductInventoryByProductID_LocationID(productID, locationID) == null)
             {
                 ModelState.AddModelError("", "No ProductInventory with such Productid and LocationID!");
                 return StatusCode(400, ModelState);
@@ -152,7 +152,7 @@ namespace ProductAPI.Controllers
                 }
             }
             updatedProductInventory.Shelf = updatedProductInventory.Shelf.ToUpper();
-            if (!_productInventoryRepository.UpdateProductInventory(updatedProductInventory))
+            if (!await _productInventoryRepository.UpdateProductInventory(updatedProductInventory))
             {
                 ModelState.AddModelError("", "Something went wrong when updating the productInventory!");
                 return StatusCode(400, ModelState);
@@ -167,15 +167,15 @@ namespace ProductAPI.Controllers
         [HttpGet("/Get_All_Products_By_Shelf/{shelf}")]
         [ProducesResponseType(200, Type = typeof(List<Product>))]
         [ProducesResponseType(400)]
-        public IActionResult GetAllProductsByShelf(string shelf)
+        public async Task<IActionResult> GetAllProductsByShelf(string shelf)
         {
-            if (!_productInventoryRepository.ShelfExist(shelf))
+            if (!await _productInventoryRepository.ShelfExist(shelf))
             {
                 ModelState.AddModelError("", "Shelf not found!");
                 return StatusCode(400, ModelState);
             }
 
-            var products = _productInventoryRepository.GetProductsByShelf(shelf);
+            var products = await _productInventoryRepository.GetProductsByShelf(shelf);
             if(products == null)
             {
                 ModelState.AddModelError("", "There is no products!");
@@ -191,10 +191,10 @@ namespace ProductAPI.Controllers
         [HttpGet("/Get_All_Products_quantity")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public IActionResult GetAllProductsQuantity()
+        public async Task<IActionResult> GetAllProductsQuantity()
         {
 
-            var productsQuantityList = _productInventoryRepository.GetProductsQuantity();
+            var productsQuantityList = await _productInventoryRepository.GetProductsQuantity();
 
             if(productsQuantityList == null)
             {

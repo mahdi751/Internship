@@ -1,76 +1,103 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Microsoft.EntityFrameworkCore;
+
 using ProductAPI.Data;
 using ProductAPI.Interfaces;
 using ProductAPI.Models;
 
-namespace ProductAPI.Repository;
-public class ProductRepository : IProductRepository
+namespace ProductAPI.Repository
 {
-    private readonly DataContext _context;
-    public ProductRepository(DataContext context)
+    public class ProductRepository : IProductRepository
     {
-         _context = context;
-    }
-    
-    public ICollection<Product> GetAllProducts() => _context.Products.OrderBy(p => p.ProductID).ToList();
+        private readonly DataContext _context;
 
-    public ICollection<Product> GetAllProductsWithout(int productid)
-    {
-        return   _context.Products.Where(p => p.ProductID != productid).ToList();
-    }
-
-    public Product getProductByID(int productID)
-    {
-        return _context.Products.Where(p => p.ProductID == productID).FirstOrDefault();
-    }
-
-    public bool CreateProduct(Product product)
-    {
-        /*var subcategoryEntity = _context.productSubcategories.Where(p => p.ProductSubcategoryID == subcategoryID).FirstOrDefault();
-        var modelEntity = _context.ProductModels.Where(m => m.ProductModelId == modelID).FirstOrDefault();
-
-        var subcategory = new ProductSubcategory()
+        public ProductRepository(DataContext context)
         {
-            ProductSubcategory = subcategoryEntity,
-            Product = product,
-        };*/
-        _context.Add(product);
-        return Save();
-    }
-    public bool DeleteProduct(Product product)
-    {
-        _context.Remove(product);
-        return Save();
+            _context = context;
+        }
+
+        public async Task<ICollection<Product>> GetAllProducts()
+        {
+            return await _context.Products.OrderBy(p => p.ProductID).ToListAsync();
+        }
+
+        public async Task<bool> CreateProduct(Product product)
+        {
+            await _context.AddAsync(product);
+            return await Save();
+        }
+
+        public async Task<bool> UpdateProduct(Product product)
+        {
+            _context.Update(product);
+            return await Save();
+        }
+
+        public async Task<Product> GetProductByID(int productID)
+        {
+            return await _context.Products.Where(p => p.ProductID == productID).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> DeleteProduct(Product product)
+        {
+            _context.Remove(product);
+            return await Save();
+        }
+
+        public async Task<Product> GetProductByProductNumber(Product product)
+        {
+            return await _context.Products
+            .Where(p => p.ProductNumber == product.ProductNumber && p.ProductID != product.ProductID)
+            .FirstOrDefaultAsync();
+        }
+
+        public async Task<Product> GetProductByProductRowguid(Product product)
+        {
+            return await _context.Products
+            .Where(p => p.Rowguid == product.Rowguid && p.ProductID != product.ProductID)
+            .FirstOrDefaultAsync();
+        }
+
+        public async Task<Product> GetProductByProductName(Product product)
+        {
+            return await _context.Products
+            .Where(p => p.Name == product.Name && p.ProductID != product.ProductID)
+            .FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> ProductHasPhotos(int productID)
+        {
+            return await _context.ProductProductPhotos
+            .Where(psc => psc.ProductID == productID)
+            .AnyAsync();
+        }
+
+        public async Task<bool> ProductHasInventory(int productID)
+        {
+            return await _context.ProductInventories
+            .Where(psc => psc.ProductID == productID)
+            .AnyAsync();
+        }
+
+        public async Task<bool> ProductExists(int productID)
+        {
+            return await _context.Products.AnyAsync(p => p.ProductID == productID);
+        }
+
+        public async Task<bool> SubCategoryExist(int? productSubcategoryID)
+        {
+            return await _context.productSubcategories.AnyAsync(p => p.ProductSubcategoryID == productSubcategoryID);
+        }
+
+        public async Task<bool> ModelExist(int? modelID)
+        {
+            return await _context.ProductModels.AnyAsync(p => p.ProductModelId == modelID);
+        }
+
+        public async Task<bool> Save()
+        {
+            var saved = await _context.SaveChangesAsync();
+            return saved > 0;
+        }
     }
 
-    public bool Save()
-    {
-        var saved = _context.SaveChanges();
-        return saved > 0 ? true : false;
-    }
-
-    public bool ProductExists(int productID)
-    {
-        return _context.Products.Any(p => p.ProductID == productID);
-    }
-
-    public bool SubCategoryExist(int? productSubcategoryID)
-    {
-        return _context.productSubcategories.Any(p => p.ProductSubcategoryID == productSubcategoryID);
-    }
-
-    public bool ModelExist(int? modelID)
-    {
-        return _context.ProductModels.Any(p => p.ProductModelId == modelID);
-    }
-
-    public bool UpdateProduct(Product product)
-    {
-        _context.Update(product);
-        return Save();
-    }
 }
-

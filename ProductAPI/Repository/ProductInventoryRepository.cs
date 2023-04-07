@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.Infrastructure;
-using ProductAPI.Data;
+﻿using ProductAPI.Data;
 using ProductAPI.Interfaces;
 using ProductAPI.Models;
-using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace ProductAPI.Repository
 {
@@ -13,52 +12,52 @@ namespace ProductAPI.Repository
         {
             _context = context;
         }
-        public bool CreateProductInventory(ProductInventory productInventory)
+        public async Task<bool> CreateProductInventory(ProductInventory productInventory)
         {
-            _context.Add(productInventory);
-            return Save();
+            await _context.AddAsync(productInventory);
+            return await Save();
         }
 
-        public ProductInventory GetProductInventoryByProductID_LocationID(int productid, int locationid)
+        public async Task<ProductInventory> GetProductInventoryByProductID_LocationID(int productid, int locationid)
         {
-            return _context.ProductInventories
-                .Where(pi=> pi.ProductID == productid && pi.LocationID == locationid)
+            return await _context.ProductInventories
+                .Where(pi => pi.ProductID == productid && pi.LocationID == locationid)
                 .Select(pi => new ProductInventory
-            {
-                ProductID = Convert.ToInt32(pi.ProductID),
-                LocationID = Convert.ToInt32(pi.LocationID),
-                Shelf = pi.Shelf,
-                Bin = Convert.ToInt32(pi.Bin),
-                Quantity = Convert.ToInt32(pi.Quantity),
-                rowguid = pi.rowguid,
-                ModifiedDate = pi.ModifiedDate
-            }).FirstOrDefault();
+                {
+                    ProductID = Convert.ToInt32(pi.ProductID),
+                    LocationID = Convert.ToInt32(pi.LocationID),
+                    Shelf = pi.Shelf,
+                    Bin = Convert.ToInt32(pi.Bin),
+                    Quantity = Convert.ToInt32(pi.Quantity),
+                    rowguid = pi.rowguid,
+                    ModifiedDate = pi.ModifiedDate
+                }).FirstOrDefaultAsync();
         }
 
-        public bool UpdateProductInventory(ProductInventory productInventory)
+        public async Task<bool> UpdateProductInventory(ProductInventory productInventory)
         {
             _context.Update(productInventory);
-            return Save();
+            return await Save();
         }
 
-        public ICollection<Product> GetProductsByShelf(string shelf)
+        public async Task<ICollection<Product>> GetProductsByShelf(string shelf)
         {
-            var productsIDList = _context.ProductInventories
+            var productsIDList = await _context.ProductInventories
                 .Where(pi => pi.Shelf == shelf)
                 .Select(pi => pi.ProductID)
                 .Distinct()
-                .ToList();
+                .ToListAsync();
 
-            var allProducts = _context.Products
+            var allProducts = await _context.Products
             .Where(p => productsIDList.Contains(p.ProductID))
-            .ToList();
+            .ToListAsync();
 
             return allProducts;
         }
 
-        public ICollection<object> GetProductsQuantity()
+        public async Task<ICollection<Object>> GetProductsQuantity()
         {
-            var productQuantities = _context.ProductInventories
+            var productQuantities = await _context.ProductInventories
                 .GroupBy(pi => pi.ProductID)
                 .Select(g => new
                 {
@@ -66,30 +65,35 @@ namespace ProductAPI.Repository
                     ProductID = g.Key,
                     TotalQuantity = g.Sum(pi => pi.Quantity)
                 })
-                .ToList();
+                .ToListAsync();
 
-            //since productQuantities variable is an anonymous type due to the select we need to cast it to be compatible with the return
-            return (ICollection<object>)productQuantities;
+            return productQuantities.Select(q => new Dictionary<string, int>
+            {
+                { "ProductID", q.ProductID },
+                { "TotalQuantity", q.TotalQuantity }
+
+            }).ToList<object>();
         }
 
-        public bool ProductExists(int productID)
+
+        public async Task<bool> ProductExists(int productID)
         {
-            return _context.Products.Any(p => p.ProductID == productID);
+            return await _context.Products.AnyAsync(p => p.ProductID == productID);
         }
 
-        public bool LocationExists(int locationID)
+        public async Task<bool> LocationExists(int locationID)
         {
-            return _context.Locations.Any(p => p.LocationID == locationID);
+            return await _context.Locations.AnyAsync(p => p.LocationID == locationID);
         }
 
-        public bool ShelfExist(string shelf)
+        public async Task<bool> ShelfExist(string shelf)
         {
-            return _context.ProductInventories.Any(p => p.Shelf == shelf);
+            return await _context.ProductInventories.AnyAsync(p => p.Shelf == shelf);
         }
 
-        public bool Save()
+        public async Task<bool> Save()
         {
-            var saved = _context.SaveChanges();
+            var saved = await _context.SaveChangesAsync();
             return saved > 0 ? true : false;
         }
 

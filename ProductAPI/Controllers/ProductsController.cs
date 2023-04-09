@@ -77,8 +77,6 @@ namespace ProductAPI.Controllers
             if (newProduct == null)
                 return BadRequest(ModelState);
 
-
-
             var productid = newProduct.ProductID;
             var productSubID = newProduct.ProductSubcategoryID;
             var productModelID = newProduct.ProductModelID;
@@ -274,6 +272,8 @@ namespace ProductAPI.Controllers
                 ModelState.AddModelError("", "Product Size must be <= 5 characteres!");
                 return StatusCode(400, ModelState);
             }
+
+            newProduct.ModifiedDate= DateTime.Now;
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -502,6 +502,8 @@ namespace ProductAPI.Controllers
                 ModelState.AddModelError("", "Product Size must be <= 5 characteres!");
                 return StatusCode(400, ModelState);
             }
+
+            updatedProduct.ModifiedDate = DateTime.Now;
 
             if (!await _productRepository.UpdateProduct(updatedProduct))
             {

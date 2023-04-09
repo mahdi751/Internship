@@ -70,6 +70,8 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
+            newCategory.ModifiedDate = DateTime.Now;
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -104,6 +106,13 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
+            if (await _productCategoryRepository.GetCategoryByName(updatedCategory) != null)
+            {
+
+                ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
+                return StatusCode(400, ModelState);
+            }
+
             if (await _productCategoryRepository.GetCategoryByRowguid(updatedCategory) != null)
             {
 
@@ -111,12 +120,7 @@ namespace ProductAPI.Controllers
                 return StatusCode(400, ModelState);
             }
 
-            if (await _productCategoryRepository.GetCategoryByName(updatedCategory) != null)
-            {
-
-                ModelState.AddModelError("", "Name is a unique attr.Name entered already exist!");
-                return StatusCode(400, ModelState);
-            }
+            updatedCategory.ModifiedDate = DateTime.Now;
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

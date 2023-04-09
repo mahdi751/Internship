@@ -73,6 +73,8 @@ namespace ProductAPI.Controllers
             {
                 productInventory.Quantity += newProductInventory.Quantity;
 
+                productInventory.ModifiedDate= DateTime.Now;
+
                 if (!await _productInventoryRepository.UpdateProductInventory(productInventory))
                 {
                     ModelState.AddModelError("", "Something went wrong when updating the productInventory!");
@@ -89,6 +91,8 @@ namespace ProductAPI.Controllers
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            newProductInventory.ModifiedDate = DateTime.Now;
 
             if (!await _productInventoryRepository.CreateProductInventory(newProductInventory))
             {

@@ -8,5 +8,6 @@
     "\\ProductAPI\\Models",
     "\\ProductAPI\\Repository"
   ],
+  "SelectedNode": "\\ProductAPI\\Controllers\\ProductsController.cs",
   "PreviewInSolutionExplorer": false
 }
